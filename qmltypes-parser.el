@@ -96,37 +96,43 @@
                              "/usr/lib/qt/qml/QtQuick/Window.2/plugins.qmltypes"
                              "/usr/lib/qt/qml/QtQuick/XmlListModel/plugins.qmltypes"
                              "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
+(defvar global-lookup-table (make-hash :test 'equal))
+("Qt" '("atob" "binding" "btoa" "colorEqual" "createComponent" "createQmlObject"
+        "darker" "font" "fontFamilies" "formatDate" "formatDateTime" "formatTime"))
+
 (cl-defstruct qmltype name prototype exports enums properties methods signals)
-(defvar lookup-table (make-hash-table :test 'equal))
-(cl-defstruct completion-data name path qmltype-name)
+(cl-defstruct qml-completion name path completions)
+(defvar user-lookup-table (make-hash-table :test 'equal))
+(qmltypes-init)
+(get-all-completions "Window" "QtQuick.Window2.2" t)
+(get-all-completions "Win" "QtQuick.Window2.2" t)
 
-(dolist (fn qmltypes-file-list)
-  (setq table (my-parse-file fn))
-  (qmltypes-read-table table lookup-table))
-
-(defvar user-lookup-table (setup-user-lookup-table lookup-table))
-(get-all-completions "Window" "QtQuick.Window2.2")
+(defun qmltypes-init ()
+  (let ((lookup-table (make-hash-table :test 'equal))
+        table)
+    (dolist (fn qmltypes-file-list)
+      (setq table (my-parse-file fn))
+      (qmltypes-read-table table lookup-table))
+    (setup-user-lookup-table lookup-table)))
 
 (defun setup-user-lookup-table (lookup-table)
-  (let ((user-lookup-table (make-hash-table :test 'equal)))
-    (maphash (lambda (k v)
-               (let ((exports (qmltype-exports v))
-                     parts modules name path)
-                 (when exports
-                   (mapc (lambda (expo)
-                           (setq parts (split-string expo " "))
-                           (setq modules (split-string (car parts) "/"))
-                           (setq name (cadr modules))
-                           (setq path (concat (car modules) (cadr parts)))
-                           (puthash (concat path name)
-                                    (make-completion-data
-                                     :name name
-                                     :path path
-                                     :qmltype-name (qmltype-name v))
-                                    user-lookup-table))
-                         exports))))
-             lookup-table)
-    user-lookup-table))
+  (maphash
+   (lambda (k v)
+     (let ((exports (qmltype-exports v))
+           parts modules name path completions results)
+       (when exports
+         (mapc
+          (lambda (expo)
+            (setq parts (split-string expo " "))
+            (setq modules (split-string (car parts) "/"))
+            (setq name (cadr modules))
+            (setq path (concat (car modules) (cadr parts)))
+            (push (cons name (construct-completions
+                              (qmltype-name v)
+                              lookup-table))
+                  (gethash path user-lookup-table)))
+          exports))))
+   lookup-table))
 
 (defun do-get-all-completions (name lookup-table results)
   (let* ((item (gethash name lookup-table))
@@ -144,16 +150,21 @@
       (setq item (gethash item-name lookup-table)))
     `(,completions . ,visited)))
 
-(defun get-all-completions (name path)
+(defun construct-completions (name lookup-table)
   (let ((suffix "Attached")
-        (data (gethash (concat path name) user-lookup-table))
-        results
-        real-name)
-    (when data
-      (setq real-name (completion-data-qmltype-name data))
-      (setq results (do-get-all-completions real-name lookup-table results))
-      (setq results (do-get-all-completions (concat real-name suffix) lookup-table results))
-      (car results))))
+        results)
+    (setq results (do-get-all-completions name lookup-table results))
+    (setq results (do-get-all-completions (concat name suffix) lookup-table results))
+    (car results)))
+
+(defun get-all-completions (name path try-match-name-p)
+  (let* ((alist (gethash path user-lookup-table)))
+    (if try-match-name-p
+        (delq nil
+              (mapcar
+               (lambda (x) (and (string-prefix-p name (car x)) (car x))) alist))
+      (let ((comp (assoc name alist)))
+        (and comp (cdr comp))))))
 
 (defun my-parse (s)
   (with-temp-buffer

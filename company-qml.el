@@ -60,33 +60,44 @@
 
 (defun company-qml-grab-prefix ()
   (save-excursion
-    (let ((current (point))
-          line)
+    (let ((current (point)))
       (skip-chars-backward "^;\n")
-      (setq line (company-qml--remove-whitespaces
-                  (buffer-substring-no-properties (point) current)))
-      (if (company-qml--initial-upcase-p line)
-          (let ((start (string-match "\\." line)))
-            (if start
-                (substring-no-properties name (1+ start))
-              line))
-        (setq global-prefix (split-string line "\\."))
-        (setq global-prefix (list (company-qml--parse-parents) line))
-        line))))
-(split-string "ab.c" "\\.")
-(defvar global-prefix)
-(defun company-qml-get-completions (prefix)
-  (let* ((pair global-prefix)
-         (prefix (car pair))
-         (suffix (cadr pair))
-         completions)
-    (mapc (lambda (x)
-            (when (string-prefix-p suffix x)
-              (push x completions)))
+      (setq currrent-line (company-qml--remove-whitespaces
+                           (buffer-substring-no-properties (point) current)))
+      (if (company-qml--initial-upcase-p currrent-line)
+          (progn
+            (setq global-prefix (split-string currrent-line "\\."))
+            (if (> (length global-prefix) 1)
+                (cadr global-prefix)
+              currrent-line))
+        (setq global-prefix (list (company-qml--parse-parents) currrent-line))
+        currrent-line))))
+;; 1.1 ("Item" "visi"), !try-match & prefix-filtering
+;; 1.2 ("Item" "") !try-match + try-match ""
+;; 2.1 ("Lay"), try-match
+;; 2.2 ("Layout" "min"), !try-match & prefix filtering
+;; 1.1==2.2
+;; 1.2 line == ""
+
+(defvar global-prefix nil)
+(defvar current-line nil)
+(defun company-qml-get-completions (arg)
+  (let* ((name (car global-prefix))
+         (member-name (cadr global-prefix))
+         (completions
           (mapcan (lambda (x)
-                    (get-all-completions prefix x))
-                  (company-qml--parse-toplevel-paths)))
-    completions))
+                    (get-all-completions name x (not member-name)))
+                  (company-qml--parse-toplevel-paths))))
+    (if member-name
+        (if (string= current-line "")
+            (append completions
+                    (mapcan (lambda (x)
+                              (get-all-completions "" x t))
+                            (company-qml--parse-toplevel-paths)))
+          (delq nil
+                (mapcar
+                 (lambda (x) (and (string-prefix-p member-name x) x)) completions)))
+      completions)))
 
 ;;;###autoload
 (defun company-qml (command &optional arg &rest ignored)
@@ -96,7 +107,7 @@
     ('interactive (company-begin-backend 'company-qml))
     ('prefix (and (eq 'qml-mode major-mode) (company-qml-grab-prefix)))
     ('candidates (company-qml-get-completions arg))
-    ('sorted t)))
+    ('sorted nil)))
 
 (add-to-list 'company-backends 'company-qml)
 (setq company-backends (delete 'company-qml company-backends))

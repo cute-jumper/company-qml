@@ -1,0 +1,4 @@
+* company-qml
+A company-mode backend for QML files.
+
+Work in progress.

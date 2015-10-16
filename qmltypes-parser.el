@@ -25,151 +25,7 @@
 ;;; Code:
 
 (require 'json)
-
-(defun my-read-string (type str)
-  (with-temp-buffer
-    (insert str)
-    (goto-char (point-min))
-    (cond ((eq type :property) (read-property))
-          ((eq type :enum) (read-enum))
-          ((eq type :method) (read-method))
-          ((eq type :signal) (read-signal)))))
-
-(my-read-string :enum "{
-            name: \"HAlignment\"
-            values: {
-                \"AlignLeft\": 1,
-                \"AlignRight\": 2,
-                \"AlignHCenter\": 4,
-                \"AlignJustify\": 8
-            }
-foo: abc
-
-}
-")
-(defun read-enum ()
-  (let ((elements '()))
-    (json-advance)
-    (json-skip-whitespace)
-    (while (not (char-equal (json-peek) ?}))
-      (setq word (word-at-point))
-      (message "%s" word)
-      (if (string= word "name")
-          (progn
-            (json-advance (length word))
-            ;; TODO: check ?:
-            (json-advance)
-            (json-skip-whitespace)
-            (push `(,word . ,(json-read-string)) elements))
-        (if (string= word "values")
-            (progn
-              (json-advance (length word))
-              ;; TODO: check ?:
-              (json-advance)
-              (json-skip-whitespace)
-              (push `(,word . ,(json-read-object)) elements))))
-      (skip-to-next-item))
-    elements))
-(defun skip-to-next-item ()
-  (skip-chars-forward "^;\r\n")
-  (json-advance)
-  (json-skip-whitespace)
-  (point))
-(my-read-string :property "{
-name: \"abc\"
-type: \"int\";revision: 2;   isReadOnly: true
-}")
-(defun read-property ()
-  "Starting from {."
-  (let ((elements '()))
-    (json-advance)
-    (json-skip-whitespace)
-    (while (not (char-equal (json-peek) ?}))
-      (setq word (word-at-point))
-      (message "word: %s" word)
-      (if (or (string= word "name") (string= word "type"))
-          (progn
-            (json-advance (length word))
-            ;; TODO: check ?:
-            (json-advance)
-            (json-skip-whitespace)
-            (push `(,word . ,(json-read-string)) elements)))
-      (skip-to-next-item))
-    (json-advance)
-    elements))
-(my-read-string :method "{
-            name: \"select\"
-            Parameter { name: \"start\"; type: \"int\" }
-            Parameter { name: \"end\"; type: \"int\" }
-}")
-(defun read-method ()
-  (let ((elements '(("Parameters" . '()))))
-    (json-advance)
-    (json-skip-whitespace)
-    (while (not (char-equal (json-peek) ?}))
-      (setq word (word-at-point))
-      (message "word: %s" word)
-      (if (string= word "name")
-          (progn
-            (json-advance (length word))
-            ;; TODO: check ?:
-            (json-advance)
-            (json-skip-whitespace)
-            (push `(,word . ,(json-read-string)) elements))
-        (if (string= word "Parameter")
-            (progn
-              (setq v (assoc "Parameters" elements))
-              (json-advance (length word))
-              ;; TODO: check ?:
-              (json-skip-whitespace)
-              (push (read-property) v))
-          (skip-to-next-item)))
-      (json-skip-whitespace))
-    elements))
-(defun read-signal ())
-(defun read-exports ())
-(defun read-prototype ())
-
-(defun read-object ()
-  "Read qml object at point."
-  (let ((elements (json-new-object)) object-name
-        key value)
-    (json-skip-whitespace)
-    (setq object-name (thing-at-point 'word t))
-    (json-skip-whitespace)
-    (unless (not (char-equal (json-peek) ?{))
-      (error "Error"))
-    (json-advance)
-    (json-skip-whitespace)
-    (setq key (thing-at-point 'word t))
-    (json-skip-whitespace)
-    (if (char-equal (json-peek) ?:)
-        (setq value (read-json))
-      (if (char-equal (json-peek) :{)
-          (setq value (read-member))))
-    (setq elements (push (word key value) elements))
-    (unless (char-equal (json-peek) ?})
-      (json-skip-whitespace)
-      (setq key (thing-at-point 'word t))
-      (message "%s" key)
-      (json-skip-whitespace)
-      (if (char-equal (json-peek) ?:)
-          (json-advance)
-        (if (char-equal (json-peek) ?{)
-            (setq value (read-object) v)
-          (setq value (thing-at-point 'word t))
-          (setq elements (json-add-to-object elements key value))
-          (json-skip-whitespace))))
-    ;; Skip over the "}"
-    (json-advance)
-    elements))
-
-(my-read-string "Module
-{
-   Component {
-      name: \"abc\"
-}
-}")
+(require 'cl-lib)
 
 (defun qmltypes-parse ()
   (let (name)
@@ -181,6 +37,7 @@ type: \"int\";revision: 2;   isReadOnly: true
 (defun qmltypes--do-parse (name)
   ;; TODO error checking
   (let ((elements '())
+        (json-key-type 'string)
         word key value)
     (json-skip-whitespace)
     ;; skip {
@@ -206,6 +63,84 @@ type: \"int\";revision: 2;   isReadOnly: true
     (json-advance)
     `(,name . ,(reverse elements))))
 
+(defun qmltypes-read-table (component-alist lookup-table)
+  (dolist (component (cdr component-alist))
+    (let* (name prototype exports enums properties methods signals)
+      (dolist (key-value (cdr component))
+        (pcase (car key-value)
+          ("name" (setq name (cadr key-value)))
+          ("prototype" (setq prototype (cadr key-value)))
+          ("exports" (setq exports (cadr key-value)))
+          ("Enum" (let ((values (cadr (assoc "values" (cdr key-value)))))
+                    (mapc (lambda (x) (push (car x) enums)) values)))
+          ("Property" (push (cadr (assoc "name" (cdr key-value))) properties))
+          ("Method" (push (cadr (assoc "name" (cdr key-value))) methods))
+          ("Signal" (let ((name (cadr (assoc "name" (cdr key-value)))))
+                      (push (concat "on" (upcase-initials name))  signals)))))
+      (let ((item (make-qmltype :name name
+                                :prototype prototype
+                                :exports exports
+                                :enums enums
+                                :properties properties
+                                :methods methods
+                                :signals signals)))
+        (puthash name item lookup-table)))))
+
+(cl-defstruct qmltype name prototype exports enums properties methods signals)
+(setq table (my-parse-file "/usr/lib/qt/imports/builtins.qmltypes"))
+(setq lookup-table (make-hash-table :test 'equal))
+(qmltypes-read-table table lookup-table)
+(cl-defstruct completion-data name path qmltype-name)
+(setq user-lookup-table (setup-user-lookup-table lookup-table))
+(get-all-completions "Animation" "QtQuick1.0" lookup-table user-lookup-table)
+
+(defun setup-user-lookup-table (lookup-table)
+  (let ((user-lookup-table (make-hash-table :test 'equal)))
+    (maphash (lambda (k v)
+               (let ((exports (qmltype-exports v))
+                     parts names)
+                 (when exports
+                   (mapc (lambda (expo)
+                           (setq parts (split-string expo " "))
+                           (setq names (split-string (car parts) "/"))
+                           (puthash (cadr names)
+                                    (make-completion-data
+                                     :name (cadr names)
+                                     :path (concat (car names) (cadr parts))
+                                     :qmltype-name (qmltype-name v))
+                                    user-lookup-table))
+                         exports))))
+             lookup-table)
+    user-lookup-table))
+
+
+(defun do-get-all-completions (name lookup-table results)
+  (let* ((item (gethash name lookup-table))
+         (item-name name)
+         (completions (car results))
+         (visited (cdr results)))
+    (while (and item (not (member item-name visited)))
+      (push item-name visited)
+      (setq completions (append completions
+                                (qmltype-enums item)
+                                (qmltype-properties item)
+                                (qmltype-methods item)
+                                (qmltype-signals item)))
+      (setq item-name (qmltype-prototype item))
+      (setq item (gethash item-name lookup-table)))
+    `(,completions . ,visited)))
+
+(defun get-all-completions (name path lookup-table user-lookup-table)
+  (let ((suffix "Attached")
+        (data (gethash name user-lookup-table))
+        results
+        real-name)
+    (when (and data (string= (completion-data-path data) path))
+      (setq real-name (completion-data-qmltype-name data))
+      (setq results (do-get-all-completions real-name lookup-table results))
+      (setq results (do-get-all-completions (concat real-name suffix) lookup-table results))
+      (car results))))
+
 (defun my-parse (s)
   (with-temp-buffer
     (insert s)
@@ -217,12 +152,8 @@ type: \"int\";revision: 2;   isReadOnly: true
     (insert-file-contents file)
     (goto-char (point-min))
     (re-search-forward "Module")
-                                        ;    (re-search-forward "Component")
-                                        ;   (re-search-forward "Component")
     (beginning-of-line)
     (qmltypes-parse)))
-
-(my-parse-file "/usr/lib/qt/imports/builtins.qmltypes")
 
 (my-parse "
     Component {
@@ -236,11 +167,7 @@ type: \"int\";revision: 2;   isReadOnly: true
     }
 ")
 
-
 ;;; object = word {name:json(;|\n)object}
-;;; types = string | number | word
-;;; array = [types]
-;;; data = types | array
 
 (provide 'qmltypes-parser)
 ;;; qmltypes-parser.el ends here

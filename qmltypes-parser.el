@@ -26,6 +26,7 @@
 
 (require 'json)
 (require 'cl-lib)
+(require 'pcase)
 
 (defun qmltypes-parse ()
   (let (name)
@@ -76,7 +77,7 @@
           ("Property" (push (cadr (assoc "name" (cdr key-value))) properties))
           ("Method" (push (cadr (assoc "name" (cdr key-value))) methods))
           ("Signal" (let ((name (cadr (assoc "name" (cdr key-value)))))
-                      (push (concat "on" (upcase-initials name))  signals)))))
+                      (push (concat "on" (upcase-initials name)) signals)))))
       (let ((item (make-qmltype :name name
                                 :prototype prototype
                                 :exports exports
@@ -85,34 +86,47 @@
                                 :methods methods
                                 :signals signals)))
         (puthash name item lookup-table)))))
-
+(defvar qmltypes-file-list '("/usr/lib/qt/qml/QtQuick/Controls/plugins.qmltypes"
+                             "/usr/lib/qt/qml/QtQuick/Dialogs/plugins.qmltypes"
+                             "/usr/lib/qt/qml/QtQuick/Extras/plugins.qmltypes"
+                             "/usr/lib/qt/qml/QtQuick/Layouts/plugins.qmltypes"
+                             "/usr/lib/qt/qml/QtQuick/LocalStorage/plugins.qmltypes"
+                             "/usr/lib/qt/qml/QtQuick/Particles.2/plugins.qmltypes"
+                             "/usr/lib/qt/qml/QtQuick/PrivateWidgets/plugins.qmltypes"
+                             "/usr/lib/qt/qml/QtQuick/Window.2/plugins.qmltypes"
+                             "/usr/lib/qt/qml/QtQuick/XmlListModel/plugins.qmltypes"
+                             "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
 (cl-defstruct qmltype name prototype exports enums properties methods signals)
-(setq table (my-parse-file "/usr/lib/qt/imports/builtins.qmltypes"))
-(setq lookup-table (make-hash-table :test 'equal))
-(qmltypes-read-table table lookup-table)
+(defvar lookup-table (make-hash-table :test 'equal))
 (cl-defstruct completion-data name path qmltype-name)
-(setq user-lookup-table (setup-user-lookup-table lookup-table))
-(get-all-completions "Animation" "QtQuick1.0" lookup-table user-lookup-table)
+
+(dolist (fn qmltypes-file-list)
+  (setq table (my-parse-file fn))
+  (qmltypes-read-table table lookup-table))
+
+(defvar user-lookup-table (setup-user-lookup-table lookup-table))
+(get-all-completions "Window" "QtQuick.Window2.2")
 
 (defun setup-user-lookup-table (lookup-table)
   (let ((user-lookup-table (make-hash-table :test 'equal)))
     (maphash (lambda (k v)
                (let ((exports (qmltype-exports v))
-                     parts names)
+                     parts modules name path)
                  (when exports
                    (mapc (lambda (expo)
                            (setq parts (split-string expo " "))
-                           (setq names (split-string (car parts) "/"))
-                           (puthash (cadr names)
+                           (setq modules (split-string (car parts) "/"))
+                           (setq name (cadr modules))
+                           (setq path (concat (car modules) (cadr parts)))
+                           (puthash (concat path name)
                                     (make-completion-data
-                                     :name (cadr names)
-                                     :path (concat (car names) (cadr parts))
+                                     :name name
+                                     :path path
                                      :qmltype-name (qmltype-name v))
                                     user-lookup-table))
                          exports))))
              lookup-table)
     user-lookup-table))
-
 
 (defun do-get-all-completions (name lookup-table results)
   (let* ((item (gethash name lookup-table))
@@ -130,12 +144,12 @@
       (setq item (gethash item-name lookup-table)))
     `(,completions . ,visited)))
 
-(defun get-all-completions (name path lookup-table user-lookup-table)
+(defun get-all-completions (name path)
   (let ((suffix "Attached")
-        (data (gethash name user-lookup-table))
+        (data (gethash (concat path name) user-lookup-table))
         results
         real-name)
-    (when (and data (string= (completion-data-path data) path))
+    (when data
       (setq real-name (completion-data-qmltype-name data))
       (setq results (do-get-all-completions real-name lookup-table results))
       (setq results (do-get-all-completions (concat real-name suffix) lookup-table results))

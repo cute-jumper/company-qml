@@ -98,7 +98,48 @@
                              "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
 (defvar global-lookup-table (make-hash :test 'equal))
 ("Qt" '("atob" "binding" "btoa" "colorEqual" "createComponent" "createQmlObject"
-        "darker" "font" "fontFamilies" "formatDate" "formatDateTime" "formatTime"))
+        "darker" "font" "fontFamilies" "formatDate" "formatDateTime" "formatTime"
+        "hsla" "hsva" "include" "isQtObject" "lighter" "locale" "md5" "matrix4x4"
+        "openUrlExternally" "point" "qsTr" "qsTrId" "qsTrNoOp" "qsTranslate"
+        "qsTranslateNoOp" "quaternion" "quit" "rect" "resolvedUrl" "rgba" "size"
+        "tint" "vector2d" "vector3d" "vector4d"))
+("qsTr"
+ "qsTranslate"
+ "qsTrId"
+ "QT_TR_NOOP"
+ "QT_TRANSLATE_NOOP"
+ "QT_TRID_NOOP"
+ "gc"
+ "print")
+
+("console" '("log" "assert" "time" "timeEnd" "count" "profile" "profileEnd" "exception"))
+
+
+("XMLHttpRequest" '("nodeName"
+                    "nodeValue"
+                    "nodeType"
+                    "parentNode"
+                    "childNodes"
+                    "firstChild"
+                    "lastChild"
+                    "previousSibling"
+                    "nextSibling"
+                    "attributes"
+                    "xmlVersion"
+                    "xmlEncoding"
+                    "xmlStandalone"
+                    "documentElement"
+                    "tagName"
+                    "name"
+                    "value"
+                    "ownerElement"
+                    "data"
+                    "length"
+                    "isElementContentWhitespace"
+                    "wholeText"))
+("DOMException")
+
+
 
 (cl-defstruct qmltype name prototype exports enums properties methods signals)
 (cl-defstruct qml-completion name path completions)

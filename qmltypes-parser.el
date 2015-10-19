@@ -96,49 +96,47 @@
                              "/usr/lib/qt/qml/QtQuick/Window.2/plugins.qmltypes"
                              "/usr/lib/qt/qml/QtQuick/XmlListModel/plugins.qmltypes"
                              "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
-(defvar global-lookup-table (make-hash :test 'equal))
-("Qt" '("atob" "binding" "btoa" "colorEqual" "createComponent" "createQmlObject"
-        "darker" "font" "fontFamilies" "formatDate" "formatDateTime" "formatTime"
-        "hsla" "hsva" "include" "isQtObject" "lighter" "locale" "md5" "matrix4x4"
-        "openUrlExternally" "point" "qsTr" "qsTrId" "qsTrNoOp" "qsTranslate"
-        "qsTranslateNoOp" "quaternion" "quit" "rect" "resolvedUrl" "rgba" "size"
-        "tint" "vector2d" "vector3d" "vector4d"))
-("qsTr"
- "qsTranslate"
- "qsTrId"
- "QT_TR_NOOP"
- "QT_TRANSLATE_NOOP"
- "QT_TRID_NOOP"
- "gc"
- "print")
+(defvar global-lookup-table
+  '(("Qt" . ("atob" "binding" "btoa" "colorEqual" "createComponent" "createQmlObject"
+             "darker" "font" "fontFamilies" "formatDate" "formatDateTime" "formatTime"
+             "hsla" "hsva" "include" "isQtObject" "lighter" "locale" "md5" "matrix4x4"
+             "openUrlExternally" "point" "qsTr" "qsTrId" "qsTrNoOp" "qsTranslate"
+             "qsTranslateNoOp" "quaternion" "quit" "rect" "resolvedUrl" "rgba" "size"
+             "tint" "vector2d" "vector3d" "vector4d"))
+    ("console" . ("log" "assert" "time" "timeEnd" "count" "profile" "profileEnd" "exception"))
+    ("XMLHttpRequest" . ("nodeName" "nodeValue" "nodeType" "parentNode" "childNodes"
+                         "firstChild" "lastChild" "previousSibling" "nextSibling"
+                         "attributes" "xmlVersion" "xmlEncoding" "xmlStandalone"
+                         "documentElement" "tagName" "name" "value" "ownerElement"
+                         "data" "length" "isElementContentWhitespace" "wholeText"))
+    ("qsTr")
+    ("qsTranslate")
+    ("qsTrId")
+    ("QT_TR_NOOP")
+    ("QT_TRANSLATE_NOOP")
+    ("QT_TRID_NOOP")
+    ("gc")
+    ("print")
+    ("DOMException")))
 
-("console" '("log" "assert" "time" "timeEnd" "count" "profile" "profileEnd" "exception"))
+(defun get-global-completions (name &optional member-name)
+  (let ((lookup-table (if member-name
+                          (cdr (assoc name global-lookup-table))
+                        global-lookup-table))
+        (completion-name (or member-name name))
+        candidate
+        completions)
+    (when lookup-table
+      (mapc
+       (lambda (x)
+         (setq candidate (or (car-safe x) x))
+         (and (string-prefix-p completion-name candidate)
+              (push candidate completions)))
+       lookup-table)
+      completions)))
 
-
-("XMLHttpRequest" '("nodeName"
-                    "nodeValue"
-                    "nodeType"
-                    "parentNode"
-                    "childNodes"
-                    "firstChild"
-                    "lastChild"
-                    "previousSibling"
-                    "nextSibling"
-                    "attributes"
-                    "xmlVersion"
-                    "xmlEncoding"
-                    "xmlStandalone"
-                    "documentElement"
-                    "tagName"
-                    "name"
-                    "value"
-                    "ownerElement"
-                    "data"
-                    "length"
-                    "isElementContentWhitespace"
-                    "wholeText"))
-("DOMException")
-
+(get-global-completions "Qt" "a")
+(get-global-completions "qs")
 
 
 (cl-defstruct qmltype name prototype exports enums properties methods signals)

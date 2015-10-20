@@ -62,16 +62,16 @@
   (save-excursion
     (let ((current (point)))
       (skip-chars-backward "^;\n")
-      (setq currrent-line (company-qml--remove-whitespaces
-                           (buffer-substring-no-properties (point) current)))
-      (if (company-qml--initial-upcase-p currrent-line)
+      (setq current-line (company-qml--remove-whitespaces
+                          (buffer-substring-no-properties (point) current)))
+      (if (company-qml--initial-upcase-p current-line)
           (progn
-            (setq global-prefix (split-string currrent-line "\\."))
+            (setq global-prefix (split-string current-line "\\."))
             (if (> (length global-prefix) 1)
                 (cadr global-prefix)
-              currrent-line))
-        (setq global-prefix (list (company-qml--parse-parents) currrent-line))
-        currrent-line))))
+              current-line))
+        (setq global-prefix (list (company-qml--parse-parents) current-line))
+        current-line))))
 ;; 1.1 ("Item" "visi"), !try-match & prefix-filtering
 ;; 1.2 ("Item" "") !try-match + try-match ""
 ;; 2.1 ("Lay"), try-match
@@ -88,15 +88,28 @@
           (mapcan (lambda (x)
                     (get-all-completions name x (not member-name)))
                   (company-qml--parse-toplevel-paths))))
+    (if (string-match-p "\\." current-line)
+        (setq completions
+              (append completions
+                      (get-global-completions
+                       (car global-prefix)
+                       (cadr global-prefix))))
+      (setq completions
+            (append completions
+                    (get-global-completions
+                     current-line))))
     (if member-name
+        ;;1.2
         (if (string= current-line "")
             (append completions
                     (mapcan (lambda (x)
                               (get-all-completions "" x t))
                             (company-qml--parse-toplevel-paths)))
+          ;;1.1, 2.2
           (delq nil
                 (mapcar
                  (lambda (x) (and (string-prefix-p member-name x) x)) completions)))
+      ;;2.1
       completions)))
 
 ;;;###autoload

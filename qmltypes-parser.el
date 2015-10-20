@@ -135,16 +135,14 @@
        lookup-table)
       completions)))
 
-(get-global-completions "Qt" "a")
-(get-global-completions "qs")
-
-
 (cl-defstruct qmltype name prototype exports enums properties methods signals)
 (cl-defstruct qml-completion name path completions)
 (defvar user-lookup-table (make-hash-table :test 'equal))
 (qmltypes-init)
 (get-all-completions "Window" "QtQuick.Window2.2" t)
 (get-all-completions "Win" "QtQuick.Window2.2" t)
+(get-global-completions "Qt" "a")
+(get-global-completions "qs")
 
 (defun qmltypes-init ()
   (let ((lookup-table (make-hash-table :test 'equal))

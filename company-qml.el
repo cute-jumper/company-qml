@@ -49,7 +49,7 @@
     ("gc")
     ("print")
     ("DOMException"))
-  "Predefined completion table for global objects availble in QML.")
+  "Predefined completion table for global objects available in QML.")
 
 (defvar company-qml--syntax-list nil
   "Store syntax information for completion.")

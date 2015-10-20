@@ -1,4 +1,4 @@
-;;; qmltypes-parser.el --- Naive parser for plugins.qmltypes  -*- lexical-binding: t; -*-
+;;; qmltypes-parser.el --- Naive parser for plugins.qmltypes file
 
 ;; Copyright (C) 2015  Junpeng Qiu
 
@@ -28,14 +28,17 @@
 (require 'cl-lib)
 (require 'pcase)
 
-(defun qmltypes-parse ()
-  (let (name)
-    (json-skip-whitespace)
-    (setq name (thing-at-point 'word t))
-    (forward-word)
-    (qmltypes--do-parse name)))
+(defvar qmltypes-parser-file-list nil
+  "A list of plugins.qmltypes files.")
 
-(defun qmltypes--do-parse (name)
+(cl-defstruct qmltypes-parser-type-info
+  name prototype exports enums properties methods signals)
+
+;;; Syntax:
+;;; object = symbol {name:json(;|\n)object}
+
+(defun qmltypes-parser--do-parse (name)
+  "Recursively parse the current QML structure of NAME."
   ;; TODO error checking
   (let ((elements '())
         (json-key-type 'string)
@@ -57,14 +60,40 @@
                   (json-read-from-string
                    (buffer-substring-no-properties start (point))))
             (push (list key value) elements))
-        (push (qmltypes--do-parse key) elements))
+        (push (qmltypes-parser--do-parse key) elements))
       (json-skip-whitespace)
       (skip-chars-forward ";")
       (json-skip-whitespace))
     (json-advance)
     `(,name . ,(reverse elements))))
 
-(defun qmltypes-read-table (component-alist lookup-table)
+(defun qmltypes-parser-parse-from-point ()
+  "Parse plugins.qmltypes file from current point.
+The point should be placed before \"name {...}.\""
+  (let (name)
+    (json-skip-whitespace)
+    (setq name (thing-at-point 'word t))
+    (forward-word)
+    (qmltypes-parser--do-parse name)))
+
+(defun qmltypes-parser-parse-string (s)
+  "Parse from string S."
+  (with-temp-buffer
+    (insert s)
+    (goto-char (point-min))
+    (qmltypes-parser-parse-from-point)))
+
+(defun qmltypes-parser-parse-file (file)
+  "Parse from FILE."
+  (with-temp-buffer
+    (insert-file-contents file)
+    (goto-char (point-min))
+    (re-search-forward "Module")
+    (beginning-of-line)
+    (qmltypes-parser-parse-from-point)))
+
+(defun qmltypes-parser--extract-type-info (component-alist type-info-table)
+  "Extract and append type info from COMPONENT-ALIST to TYPE-INFO-TABLE."
   (dolist (component (cdr component-alist))
     (let* (name prototype exports enums properties methods signals)
       (dolist (key-value (cdr component))
@@ -78,158 +107,23 @@
           ("Method" (push (cadr (assoc "name" (cdr key-value))) methods))
           ("Signal" (let ((name (cadr (assoc "name" (cdr key-value)))))
                       (push (concat "on" (upcase-initials name)) signals)))))
-      (let ((item (make-qmltype :name name
-                                :prototype prototype
-                                :exports exports
-                                :enums enums
-                                :properties properties
-                                :methods methods
-                                :signals signals)))
-        (puthash name item lookup-table)))))
-(defvar qmltypes-file-list '("/usr/lib/qt/qml/QtQuick/Controls/plugins.qmltypes"
-                             "/usr/lib/qt/qml/QtQuick/Dialogs/plugins.qmltypes"
-                             "/usr/lib/qt/qml/QtQuick/Extras/plugins.qmltypes"
-                             "/usr/lib/qt/qml/QtQuick/Layouts/plugins.qmltypes"
-                             "/usr/lib/qt/qml/QtQuick/LocalStorage/plugins.qmltypes"
-                             "/usr/lib/qt/qml/QtQuick/Particles.2/plugins.qmltypes"
-                             "/usr/lib/qt/qml/QtQuick/PrivateWidgets/plugins.qmltypes"
-                             "/usr/lib/qt/qml/QtQuick/Window.2/plugins.qmltypes"
-                             "/usr/lib/qt/qml/QtQuick/XmlListModel/plugins.qmltypes"
-                             "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
-(defvar global-lookup-table
-  '(("Qt" . ("atob" "binding" "btoa" "colorEqual" "createComponent" "createQmlObject"
-             "darker" "font" "fontFamilies" "formatDate" "formatDateTime" "formatTime"
-             "hsla" "hsva" "include" "isQtObject" "lighter" "locale" "md5" "matrix4x4"
-             "openUrlExternally" "point" "qsTr" "qsTrId" "qsTrNoOp" "qsTranslate"
-             "qsTranslateNoOp" "quaternion" "quit" "rect" "resolvedUrl" "rgba" "size"
-             "tint" "vector2d" "vector3d" "vector4d"))
-    ("console" . ("log" "assert" "time" "timeEnd" "count" "profile" "profileEnd" "exception"))
-    ("XMLHttpRequest" . ("nodeName" "nodeValue" "nodeType" "parentNode" "childNodes"
-                         "firstChild" "lastChild" "previousSibling" "nextSibling"
-                         "attributes" "xmlVersion" "xmlEncoding" "xmlStandalone"
-                         "documentElement" "tagName" "name" "value" "ownerElement"
-                         "data" "length" "isElementContentWhitespace" "wholeText"))
-    ("qsTr")
-    ("qsTranslate")
-    ("qsTrId")
-    ("QT_TR_NOOP")
-    ("QT_TRANSLATE_NOOP")
-    ("QT_TRID_NOOP")
-    ("gc")
-    ("print")
-    ("DOMException")))
+      (let ((type-info (make-qmltypes-parser-type-info :name name
+                                                       :prototype prototype
+                                                       :exports exports
+                                                       :enums enums
+                                                       :properties properties
+                                                       :methods methods
+                                                       :signals signals)))
+        (puthash name type-info type-info-table)))))
 
-(defun get-global-completions (name &optional member-name)
-  (let ((lookup-table (if member-name
-                          (cdr (assoc name global-lookup-table))
-                        global-lookup-table))
-        (completion-name (or member-name name))
-        candidate
-        completions)
-    (when lookup-table
-      (mapc
-       (lambda (x)
-         (setq candidate (or (car-safe x) x))
-         (and (string-prefix-p completion-name candidate)
-              (push candidate completions)))
-       lookup-table)
-      completions)))
-
-(cl-defstruct qmltype name prototype exports enums properties methods signals)
-(cl-defstruct qml-completion name path completions)
-(defvar user-lookup-table (make-hash-table :test 'equal))
-(qmltypes-init)
-(get-all-completions "Window" "QtQuick.Window2.2" t)
-(get-all-completions "Win" "QtQuick.Window2.2" t)
-(get-global-completions "Qt" "a")
-(get-global-completions "qs")
-
-(defun qmltypes-init ()
-  (let ((lookup-table (make-hash-table :test 'equal))
-        table)
-    (dolist (fn qmltypes-file-list)
-      (setq table (my-parse-file fn))
-      (qmltypes-read-table table lookup-table))
-    (setup-user-lookup-table lookup-table)))
-
-(defun setup-user-lookup-table (lookup-table)
-  (maphash
-   (lambda (k v)
-     (let ((exports (qmltype-exports v))
-           parts modules name path completions results)
-       (when exports
-         (mapc
-          (lambda (expo)
-            (setq parts (split-string expo " "))
-            (setq modules (split-string (car parts) "/"))
-            (setq name (cadr modules))
-            (setq path (concat (car modules) (cadr parts)))
-            (push (cons name (construct-completions
-                              (qmltype-name v)
-                              lookup-table))
-                  (gethash path user-lookup-table)))
-          exports))))
-   lookup-table))
-
-(defun do-get-all-completions (name lookup-table results)
-  (let* ((item (gethash name lookup-table))
-         (item-name name)
-         (completions (car results))
-         (visited (cdr results)))
-    (while (and item (not (member item-name visited)))
-      (push item-name visited)
-      (setq completions (append completions
-                                (qmltype-enums item)
-                                (qmltype-properties item)
-                                (qmltype-methods item)
-                                (qmltype-signals item)))
-      (setq item-name (qmltype-prototype item))
-      (setq item (gethash item-name lookup-table)))
-    `(,completions . ,visited)))
-
-(defun construct-completions (name lookup-table)
-  (let ((suffix "Attached")
-        results)
-    (setq results (do-get-all-completions name lookup-table results))
-    (setq results (do-get-all-completions (concat name suffix) lookup-table results))
-    (car results)))
-
-(defun get-all-completions (name path try-match-name-p)
-  (let* ((alist (gethash path user-lookup-table)))
-    (if try-match-name-p
-        (delq nil
-              (mapcar
-               (lambda (x) (and (string-prefix-p name (car x)) (car x))) alist))
-      (let ((comp (assoc name alist)))
-        (and comp (cdr comp))))))
-
-(defun my-parse (s)
-  (with-temp-buffer
-    (insert s)
-    (goto-char (point-min))
-    (qmltypes-parse)))
-(defun my-parse-file (file)
-  "Read the first JSON object contained in FILE and return it."
-  (with-temp-buffer
-    (insert-file-contents file)
-    (goto-char (point-min))
-    (re-search-forward "Module")
-    (beginning-of-line)
-    (qmltypes-parse)))
-
-(my-parse "
-    Component {
-        name: \"QDeclarativePropertyChanges\"
-        isGood: true
-        prototype: \"QDeclarativeStateOperation\"
-        exports: [\"QtQuick/PropertyChanges 1.0\"]
-        Property { name: \"target\"; type: \"QObject\"; isPointer: true }
-        Property { name: \"restoreEntryValues\"; type: \"bool\" }
-        Property { name: \"explicit\"; type: \"bool\" }
-    }
-")
-
-;;; object = word {name:json(;|\n)object}
+(defun qmltypes-parser-init ()
+  "Initialize the parser and return the table of type information."
+  (let ((type-info-table (make-hash-table :test 'equal))
+        component-alist)
+    (dolist (fn qmltypes-parser-file-list)
+      (setq component-alist (qmltypes-parser-parse-file fn))
+      (qmltypes-parser--extract-type-info component-alist type-info-table))
+    type-info-table))
 
 (provide 'qmltypes-parser)
 ;;; qmltypes-parser.el ends here

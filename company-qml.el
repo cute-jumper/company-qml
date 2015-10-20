@@ -1,4 +1,4 @@
-;;; company-qml.el --- Company backend for QML file  -*- lexical-binding: t; -*-
+;;; company-qml.el --- Company backend for QML file
 
 ;; Copyright (C) 2015  Junpeng Qiu
 
@@ -24,10 +24,46 @@
 
 ;;; Code:
 
+(require 'qml-mode)
 (require 'qmltypes-parser)
+
+(defvar qml-global-completion-table
+  '(("Qt" . ("atob" "binding" "btoa" "colorEqual" "createComponent" "createQmlObject"
+             "darker" "font" "fontFamilies" "formatDate" "formatDateTime" "formatTime"
+             "hsla" "hsva" "include" "isQtObject" "lighter" "locale" "md5" "matrix4x4"
+             "openUrlExternally" "point" "qsTr" "qsTrId" "qsTrNoOp" "qsTranslate"
+             "qsTranslateNoOp" "quaternion" "quit" "rect" "resolvedUrl" "rgba" "size"
+             "tint" "vector2d" "vector3d" "vector4d"))
+    ("console" . ("log" "assert" "time" "timeEnd" "count" "profile" "profileEnd" "exception"))
+    ("XMLHttpRequest" . ("nodeName" "nodeValue" "nodeType" "parentNode" "childNodes"
+                         "firstChild" "lastChild" "previousSibling" "nextSibling"
+                         "attributes" "xmlVersion" "xmlEncoding" "xmlStandalone"
+                         "documentElement" "tagName" "name" "value" "ownerElement"
+                         "data" "length" "isElementContentWhitespace" "wholeText"))
+    ("qsTr")
+    ("qsTranslate")
+    ("qsTrId")
+    ("QT_TR_NOOP")
+    ("QT_TRANSLATE_NOOP")
+    ("QT_TRID_NOOP")
+    ("gc")
+    ("print")
+    ("DOMException"))
+  "Predefined completion table for global objects availble in QML.")
+
+(defvar company-qml--syntax-list nil
+  "Store syntax information for completion.")
+
+(defvar company-qml--current-line nil
+  "The current line that is being processed.")
 
 (defsubst company-qml--remove-whitespaces (s)
   (replace-regexp-in-string "[ ]+" "" s))
+
+(defun company-qml--initial-upcase-p (s)
+  (when (> (length s) 0)
+    (let ((initial (aref s 0)))
+      (and (>= initial ?A) (<= initial ?Z)))))
 
 (defun company-qml--parse-toplevel-paths ()
   (save-match-data
@@ -41,11 +77,6 @@
            (company-qml--remove-whitespaces (buffer-substring-no-properties start (point)))
            toplevel-paths))
         toplevel-paths))))
-
-(defun company-qml--initial-upcase-p (s)
-  (when (> (length s) 0)
-    (let ((initial (aref s 0)))
-      (and (>= initial ?A) (<= initial ?Z)))))
 
 (defun company-qml--parse-parents ()
   (save-excursion
@@ -62,53 +93,136 @@
   (save-excursion
     (let ((current (point)))
       (skip-chars-backward "^;\n")
-      (setq current-line (company-qml--remove-whitespaces
-                          (buffer-substring-no-properties (point) current)))
-      (if (company-qml--initial-upcase-p current-line)
+      (setq company-qml--current-line (company-qml--remove-whitespaces
+                                       (buffer-substring-no-properties (point) current)))
+      (if (company-qml--initial-upcase-p company-qml--current-line)
           (progn
-            (setq global-prefix (split-string current-line "\\."))
-            (if (> (length global-prefix) 1)
-                (cadr global-prefix)
-              current-line))
-        (setq global-prefix (list (company-qml--parse-parents) current-line))
-        current-line))))
-;; 1.1 ("Item" "visi"), !try-match & prefix-filtering
-;; 1.2 ("Item" "") !try-match + try-match ""
-;; 2.1 ("Lay"), try-match
-;; 2.2 ("Layout" "min"), !try-match & prefix filtering
-;; 1.1==2.2
-;; 1.2 line == ""
+            (setq company-qml--syntax-list (split-string company-qml--current-line "\\."))
+            (if (> (length company-qml--syntax-list) 1)
+                (cadr company-qml--syntax-list)
+              company-qml--current-line))
+        (setq company-qml--syntax-list (list (company-qml--parse-parents) company-qml--current-line))
+        company-qml--current-line))))
 
-(defvar global-prefix nil)
-(defvar current-line nil)
+(defun company-qml--get-global-completions (name &optional field-name)
+  "Get completions for global object."
+  (let ((type-info-table (if field-name
+                             (cdr (assoc name qml-global-completion-table))
+                           qml-global-completion-table))
+        (completion-name (or field-name name))
+        candidate
+        completions)
+    (when type-info-table
+      (mapc
+       (lambda (x)
+         (setq candidate (or (car-safe x) x))
+         (and (string-prefix-p completion-name candidate)
+              (push candidate completions)))
+       type-info-table)
+      completions)))
+
+(defun company-qml--setup-completion-table (type-info-table)
+  "Transform TYPE-INFO-TABLE and return a table for completion.
+Parse the `exports' field to determine user-visible paths and
+names."
+  (let ((completion-table (make-hash-table :test 'equal)))
+    (maphash
+     (lambda (type-name type-info)
+       (let ((exports (qmltypes-parser-type-info-exports type-info))
+             path-parts name-parts name path completions results)
+         (when exports
+           (mapc
+            (lambda (expo)
+              (setq path-parts (split-string expo " "))
+              (setq name-parts (split-string (car path-parts) "/"))
+              (setq name (cadr name-parts))
+              (setq path (concat (car name-parts) (cadr path-parts)))
+              (push (cons name (company-qml--construct-qmltypes-completions
+                                type-name
+                                type-info-table))
+                    (gethash path completion-table)))
+            exports))))
+     type-info-table)
+    completion-table))
+
+(defun company-qml--construct-qmltypes-completions (name type-info-table)
+  (let ((suffix "Attached")
+        results)
+    (setq results
+          (company-qml--do-get-qmltypes-completions
+           name type-info-table results))
+    (setq results
+          (company-qml--do-get-qmltypes-completions
+           (concat name suffix) type-info-table results))
+    (car results)))
+
+(defun company-qml--do-get-qmltypes-completions (name type-info-table results)
+  (let* ((type-info (gethash name type-info-table))
+         (type-name name)
+         (completions (car results))
+         (visited (cdr results)))
+    (while (and type-info (not (member type-name visited)))
+      (push type-name visited)
+      (setq completions (append completions
+                                (qmltypes-parser-type-info-enums type-info)
+                                (qmltypes-parser-type-info-properties type-info)
+                                (qmltypes-parser-type-info-methods type-info)
+                                (qmltypes-parser-type-info-signals type-info)))
+      (setq type-name (qmltypes-parser-type-info-prototype type-info))
+      (setq type-info (gethash type-name type-info-table)))
+    `(,completions . ,visited)))
+
+(defun company-qml--get-qmltypes-completions (name path try-match-name-p)
+  "Get completions from plugins.qmltypes file."
+  (let* ((alist (gethash path company-qml--completion-table)))
+    (if try-match-name-p
+        (delq nil
+              (mapcar
+               (lambda (x) (and (string-prefix-p name (car x)) (car x))) alist))
+      (let ((comp (assoc name alist)))
+        (and comp (cdr comp))))))
+
+;; Simple cases:
+;; 1.
+;;   1.1 ("Item" "visi"), !try-match & prefix-filtering
+;;   1.2 ("Item" "") !try-match + try-match ""
+;; 2.
+;;   2.1 ("Lay"), try-match
+;;   2.2 ("Layout" "min"), !try-match & prefix filtering
+
+(defvar company-qml--completion-table
+  (company-qml--setup-completion-table (qmltypes-parser-init))
+  "A lookup table for finding all possible completions.")
+
 (defun company-qml-get-completions (arg)
-  (let* ((name (car global-prefix))
-         (member-name (cadr global-prefix))
+  (let* ((name (car company-qml--syntax-list))
+         (field-name (cadr company-qml--syntax-list))
          (completions
           (mapcan (lambda (x)
-                    (get-all-completions name x (not member-name)))
+                    (company-qml--get-qmltypes-completions name x (not field-name)))
                   (company-qml--parse-toplevel-paths))))
-    (if (string-match-p "\\." current-line)
+    ;; Try to get completions for global objects
+    (if (string-match-p "\\." company-qml--current-line)
         (setq completions
               (append completions
-                      (get-global-completions
-                       (car global-prefix)
-                       (cadr global-prefix))))
+                      (company-qml--get-global-completions
+                       (car company-qml--syntax-list)
+                       (cadr company-qml--syntax-list))))
       (setq completions
             (append completions
-                    (get-global-completions
-                     current-line))))
-    (if member-name
+                    (company-qml--get-global-completions
+                     company-qml--current-line))))
+    (if field-name
         ;;1.2
-        (if (string= current-line "")
+        (if (string= company-qml--current-line "")
             (append completions
                     (mapcan (lambda (x)
-                              (get-all-completions "" x t))
+                              (company-qml--get-qmltypes-completions "" x t))
                             (company-qml--parse-toplevel-paths)))
           ;;1.1, 2.2
           (delq nil
                 (mapcar
-                 (lambda (x) (and (string-prefix-p member-name x) x)) completions)))
+                 (lambda (x) (and (string-prefix-p field-name x) x)) completions)))
       ;;2.1
       completions)))
 
@@ -121,9 +235,6 @@
     ('prefix (and (eq 'qml-mode major-mode) (company-qml-grab-prefix)))
     ('candidates (company-qml-get-completions arg))
     ('sorted nil)))
-
-(add-to-list 'company-backends 'company-qml)
-(setq company-backends (delete 'company-qml company-backends))
 
 (provide 'company-qml)
 ;;; company-qml.el ends here

@@ -3,7 +3,8 @@
 ;; Copyright (C) 2015  Junpeng Qiu
 
 ;; Author: Junpeng Qiu <qjpchmail@gmail.com>
-;; Keywords: convenience
+;; Package-Requires: ((qml-mode "0.1"))
+;; Keywords: extensions
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by

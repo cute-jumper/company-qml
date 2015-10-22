@@ -3,7 +3,7 @@
 ;; Copyright (C) 2015  Junpeng Qiu
 
 ;; Author: Junpeng Qiu <qjpchmail@gmail.com>
-;; Package-Requires: ((qml-mode "0.1"))
+;; Package-Requires: ((qml-mode "0.1") (company "0.8.12"))
 ;; Keywords: extensions
 
 ;; This program is free software; you can redistribute it and/or modify

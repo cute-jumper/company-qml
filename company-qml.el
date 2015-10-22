@@ -107,6 +107,7 @@
 
 (require 'qml-mode)
 (require 'qmltypes-parser)
+(require 'cl-extra)
 
 (defvar qml-global-completion-table
   '(("Qt" . ("atob" "binding" "btoa" "colorEqual" "createComponent" "createQmlObject"
@@ -279,9 +280,9 @@ names."
   (let* ((name (car company-qml--syntax-list))
          (field-name (cadr company-qml--syntax-list))
          (completions
-          (mapcan (lambda (x)
-                    (company-qml--get-qmltypes-completions name x (not field-name)))
-                  (company-qml--parse-toplevel-paths))))
+          (cl-mapcan (lambda (x)
+                       (company-qml--get-qmltypes-completions name x (not field-name)))
+                     (company-qml--parse-toplevel-paths))))
     ;; Try to get completions for global objects
     (if (string-match-p "\\." company-qml--current-line)
         (setq completions
@@ -297,9 +298,9 @@ names."
         ;;1.2
         (if (string= company-qml--current-line "")
             (append completions
-                    (mapcan (lambda (x)
-                              (company-qml--get-qmltypes-completions "" x t))
-                            (company-qml--parse-toplevel-paths)))
+                    (cl-mapcan (lambda (x)
+                                 (company-qml--get-qmltypes-completions "" x t))
+                               (company-qml--parse-toplevel-paths)))
           ;;1.1, 2.2
           (delq nil
                 (mapcar

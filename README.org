@@ -39,14 +39,16 @@ A company-mode backend for QML files.
      :                                   "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
 
      If you =require= the =company-qml= in you init files, to make the backend
-     work, you must set the =qmltypes-parser-file-list= before that =require=
-     expression.
+     work, you must set the variable =qmltypes-parser-file-list= before that
+     =require= expression.
   3. Finally, add the backend:
      : (add-to-list 'company-backends 'company-qml)
-
      Done!
 
 * *TODO*
-- Support "as" in import statement
-- Better QML file parser. Right now we only support very simple completions.
+- Support "as" in import statement.
+- Implement a better QML parser. So far we only support very simple completions.
 - Javascript completions.
+
+  I'm not proficient in either QML or the development of company-mode
+  extensions. Any improvements or suggestions are welcome!

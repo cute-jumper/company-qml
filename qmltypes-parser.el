@@ -21,7 +21,8 @@
 
 ;;; Commentary:
 
-;;
+;; A naive parser for plugins.qmltypes file. This file is internally used by
+;; company-qml.el.
 
 ;;; Code:
 

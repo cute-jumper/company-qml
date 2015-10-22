@@ -1,4 +1,44 @@
-* company-qml
+#+TITLE: company-qml
 A company-mode backend for QML files.
 
-Work in progress.
+WORK IN PROGRESS!
+
+* Config
+  1. First, you need plugins.qmltypes files so that they can be parsed to get
+     the completion information for QML objects. Usually these files are
+     automatically generated when you install Qt5. In my Arch Linux, the
+     generated plugins.qmltypes files for QML are:
+     : $ locate plugins.qmltypes | grep QtQuick
+     : /usr/lib/qt/qml/QtQuick/Controls/plugins.qmltypes
+     : /usr/lib/qt/qml/QtQuick/Dialogs/plugins.qmltypes
+     : /usr/lib/qt/qml/QtQuick/Extras/plugins.qmltypes
+     : /usr/lib/qt/qml/QtQuick/Layouts/plugins.qmltypes
+     : /usr/lib/qt/qml/QtQuick/LocalStorage/plugins.qmltypes
+     : /usr/lib/qt/qml/QtQuick/Particles.2/plugins.qmltypes
+     : /usr/lib/qt/qml/QtQuick/PrivateWidgets/plugins.qmltypes
+     : /usr/lib/qt/qml/QtQuick/Window.2/plugins.qmltypes
+     : /usr/lib/qt/qml/QtQuick/XmlListModel/plugins.qmltypes
+     : /usr/lib/qt/qml/QtQuick.2/plugins.qmltypes
+
+     If you can't find these files, refer to [[http://doc.qt.io/qtcreator/creator-qml-modules-with-plugins.html#generating-qmltypes-files][this page]] for more information of
+     generating qmltypes files.
+  2. Set the variable =qmltypes-parser-file-list= to a list of plugins.qmltypes
+     files. Here is my setting:
+     : (setq qmltypes-parser-file-list '("/usr/lib/qt/qml/QtQuick/Controls/plugins.qmltypes"
+     :                                   "/usr/lib/qt/qml/QtQuick/Dialogs/plugins.qmltypes"
+     :                                   "/usr/lib/qt/qml/QtQuick/Extras/plugins.qmltypes"
+     :                                   "/usr/lib/qt/qml/QtQuick/Layouts/plugins.qmltypes"
+     :                                   "/usr/lib/qt/qml/QtQuick/LocalStorage/plugins.qmltypes"
+     :                                   "/usr/lib/qt/qml/QtQuick/Particles.2/plugins.qmltypes"
+     :                                   "/usr/lib/qt/qml/QtQuick/PrivateWidgets/plugins.qmltypes"
+     :                                   "/usr/lib/qt/qml/QtQuick/Window.2/plugins.qmltypes"
+     :                                   "/usr/lib/qt/qml/QtQuick/XmlListModel/plugins.qmltypes"
+     :                                   "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
+
+     If you =require= the =company-qml= in you init files, to make the backend
+     work, you must set the =qmltypes-parser-file-list= before that =require=
+     expression.
+  3. Finally, add the backend:
+     : (add-to-list 'company-backends 'company-qml)
+
+     Done!

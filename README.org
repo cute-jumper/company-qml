@@ -1,7 +1,10 @@
 #+TITLE: company-qml
 A company-mode backend for QML files.
 
-WORK IN PROGRESS!
+* Screenshots
+  [[./screenshots/object.png]]
+  [[./screenshots/field.png]]
+  [[./screenshots/global.png]]
 
 * Config
   1. First, you need plugins.qmltypes files so that they can be parsed to get
@@ -42,3 +45,8 @@ WORK IN PROGRESS!
      : (add-to-list 'company-backends 'company-qml)
 
      Done!
+
+* *TODO*
+- Support "as" in import statement
+- Better QML file parser. Right now we only support very simple completions.
+- Javascript completions.

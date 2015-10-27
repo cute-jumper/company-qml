@@ -166,10 +166,12 @@
       (backward-up-list)
       (let* ((end (point))
              (name (company-qml--remove-whitespaces
-                    (buffer-substring-no-properties (progn (beginning-of-line) (point)) end))))
-        (if (company-qml--initial-upcase-p name)
-            name
-          (concat name "." (company-qml--parse-parents)))))))
+                    (buffer-substring-no-properties (line-beginning-position) end))))
+        (if (string= name "")
+            (company-qml--parse-parents)
+          (if (company-qml--initial-upcase-p name)
+              name
+            (concat (company-qml--parse-parents) "." name)))))))
 
 (defun company-qml-grab-prefix ()
   (save-excursion
@@ -187,7 +189,7 @@
         company-qml--current-line))))
 
 (defun company-qml--get-global-completions (name &optional field-name)
-  "Get completions for global object."
+  "Get completions for global object by NAME and FIELD-NAME."
   (let ((type-info-table (if field-name
                              (cdr (assoc name qml-global-completion-table))
                            qml-global-completion-table))

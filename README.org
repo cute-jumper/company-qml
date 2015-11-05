@@ -1,4 +1,6 @@
 #+TITLE: company-qml
+[[http://melpa.org/#/company-qml][file:http://melpa.org/packages/company-qml-badge.svg]]
+
 A company-mode backend for QML files.
 
 * Screenshots

@@ -118,11 +118,11 @@ The point should be placed before \"name {...}.\""
                                                        :signals signals)))
         (puthash name type-info type-info-table)))))
 
-(defun qmltypes-parser-init ()
+(defun qmltypes-parser-init (file-list)
   "Initialize the parser and return the table of type information."
   (let ((type-info-table (make-hash-table :test 'equal))
         component-alist)
-    (dolist (fn qmltypes-parser-file-list)
+    (dolist (fn file-list)
       (setq component-alist (qmltypes-parser-parse-file fn))
       (qmltypes-parser--extract-type-info component-alist type-info-table))
     type-info-table))

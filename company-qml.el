@@ -139,6 +139,15 @@
 (defsubst company-qml--remove-whitespaces (s)
   (replace-regexp-in-string "[ ]+" "" s))
 
+(defvar company-qml-qmltypes-dir
+  (when load-file-name
+    (concat (file-name-directory load-file-name) "plugins-qmltypes")))
+
+(defun company-qml--get-stock-file-list ()
+  (and company-qml-qmltypes-dir
+       (file-directory-p company-qml-qmltypes-dir)
+       (directory-files company-qml-qmltypes-dir t "[^.]")))
+
 (defun company-qml--initial-upcase-p (s)
   (when (> (length s) 0)
     (let ((initial (aref s 0)))
@@ -278,7 +287,9 @@ names."
 (defun company-qml--get-completion-table ()
   (or company-qml--completion-table
       (setq company-qml--completion-table
-            (company-qml--setup-completion-table (qmltypes-parser-init)))))
+            (company-qml--setup-completion-table
+             (qmltypes-parser-init (or (company-qml--get-stock-file-list)
+                                       qmltypes-parser-file-list))))))
 
 (defun company-qml-get-completions (arg)
   (let* ((name (car company-qml--syntax-list))

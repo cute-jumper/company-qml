@@ -40,9 +40,6 @@ A company-mode backend for QML files.
      :                                   "/usr/lib/qt/qml/QtQuick/XmlListModel/plugins.qmltypes"
      :                                   "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
 
-     If you =require= the =company-qml= in you init files, to make the backend
-     work, you must set the variable =qmltypes-parser-file-list= before that
-     =require= expression.
   3. Finally, add the backend:
      : (add-to-list 'company-backends 'company-qml)
      Done!

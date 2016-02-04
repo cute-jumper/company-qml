@@ -77,9 +77,6 @@
 ;;      |                                   "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
 ;;      `----
 
-;;      If you `require' the `company-qml' in you init files, to make the
-;;      backend work, you must set the variable `qmltypes-parser-file-list'
-;;      before that `require' expression.
 ;;   3. Finally, add the backend:
 ;;      ,----
 ;;      | (add-to-list 'company-backends 'company-qml)
@@ -227,7 +224,8 @@ names."
                     (gethash path completion-table)))
             exports))))
      type-info-table)
-    completion-table))
+    (unless (= (hash-table-count completion-table) 0)
+      completion-table)))
 
 (defun company-qml--construct-qmltypes-completions (name type-info-table)
   (let ((suffix "Attached")

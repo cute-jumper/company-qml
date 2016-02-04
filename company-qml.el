@@ -258,7 +258,7 @@ names."
 
 (defun company-qml--get-qmltypes-completions (name path try-match-name-p)
   "Get completions from plugins.qmltypes file."
-  (let* ((alist (gethash path company-qml--completion-table)))
+  (let* ((alist (gethash path (company-qml--get-completion-table))))
     (if try-match-name-p
         (delq nil
               (mapcar
@@ -274,9 +274,13 @@ names."
 ;;   2.1 ("Lay"), try-match
 ;;   2.2 ("Layout" "min"), !try-match & prefix filtering
 
-(defvar company-qml--completion-table
-  (company-qml--setup-completion-table (qmltypes-parser-init))
+(defvar company-qml--completion-table nil
   "A lookup table for finding all possible completions.")
+
+(defun company-qml--get-completion-table ()
+  (or company-qml--completion-table
+      (setq company-qml--completion-table
+            (company-qml--setup-completion-table (qmltypes-parser-init)))))
 
 (defun company-qml-get-completions (arg)
   (let* ((name (car company-qml--syntax-list))

@@ -139,9 +139,10 @@
 (defsubst company-qml--remove-whitespaces (s)
   (replace-regexp-in-string "[ ]+" "" s))
 
-(defvar company-qml-qmltypes-dir
-  (when load-file-name
-    (concat (file-name-directory load-file-name) "plugins-qmltypes")))
+(defvar company-qml-qmltypes-dir nil)
+(setq company-qml-qmltypes-dir
+      (when load-file-name
+        (concat (file-name-directory load-file-name) "plugins-qmltypes")))
 
 (defun company-qml--get-stock-file-list ()
   (and company-qml-qmltypes-dir

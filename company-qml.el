@@ -32,63 +32,77 @@
 ;; Table of Contents
 ;; _________________
 
-;; 1 Config
-;; 2 *TODO*
+;; 1 Screenshots
+;; 2 Usage
+;; 3 Config
+;; 4 *TODO*
 
 
 ;; A company-mode backend for QML files.
 
 
-;; 1 Config
+;; 1 Screenshots
+;; =============
+
+;;   [https://github.com/cute-jumper/company-qml/tree/master/screenshots/object.png]
+;;   [https://github.com/cute-jumper/company-qml/tree/master/screenshots/field.png]
+;;   [https://github.com/cute-jumper/company-qml/tree/master/screenshots/global.png]
+
+
+;; 2 Usage
+;; =======
+
+;;   *Since 2016-02-12*, this package should work out of box if you only
+;;   want completions for standard QML objects.
+
+;;   To use it:
+;;   ,----
+;;   | (add-to-list 'company-backends 'company-qml)
+;;   `----
+;;   Done!
+
+;;   *For users of old versions*: Please note that
+;;   `qmltypes-parser-file-list' is /obsolete/ now. It has been renamed to
+;;   `company-qml-default-qmltypes-files'. What's more, if you set this
+;;   variable, it will *override* the default completions that comes with
+;;   this package. For most of the users, it will be sufficient to delete
+;;   the settings of =qmltypes-parser-file-list=(it's not needed any more!)
+;;   and use the default completions provided by this package.
+
+
+;; 3 Config
 ;; ========
 
+;;   If you want this package to provide completions for third-party
+;;   libraries, follow the steps below:
+
 ;;   1. First, you need plugins.qmltypes files so that they can be parsed
-;;      to get the completion information for QML objects. Usually these
-;;      files are automatically generated when you install Qt5. In my Arch
-;;      Linux, the generated plugins.qmltypes files for QML are:
-;;      ,----
-;;      | $ locate plugins.qmltypes | grep QtQuick
-;;      | /usr/lib/qt/qml/QtQuick/Controls/plugins.qmltypes
-;;      | /usr/lib/qt/qml/QtQuick/Dialogs/plugins.qmltypes
-;;      | /usr/lib/qt/qml/QtQuick/Extras/plugins.qmltypes
-;;      | /usr/lib/qt/qml/QtQuick/Layouts/plugins.qmltypes
-;;      | /usr/lib/qt/qml/QtQuick/LocalStorage/plugins.qmltypes
-;;      | /usr/lib/qt/qml/QtQuick/Particles.2/plugins.qmltypes
-;;      | /usr/lib/qt/qml/QtQuick/PrivateWidgets/plugins.qmltypes
-;;      | /usr/lib/qt/qml/QtQuick/Window.2/plugins.qmltypes
-;;      | /usr/lib/qt/qml/QtQuick/XmlListModel/plugins.qmltypes
-;;      | /usr/lib/qt/qml/QtQuick.2/plugins.qmltypes
-;;      `----
-
-;;      If you can't find these files, refer to [this page] for more
+;;      to get the completion information for QML objects. You can try to
+;;      find these plugins.qmltypes files under the third-party library's
+;;      directory. If you can't find them, refer to [this page] for the
 ;;      information of generating qmltypes files.
-;;   2. Set the variable `qmltypes-parser-file-list' to a list of
-;;      plugins.qmltypes files. Here is my setting:
+
+;;   2. Set the variable `company-qml-extra-qmltypes-files' to a list of
+;;      plugins.qmltypes files. For example,
 ;;      ,----
-;;      | (setq qmltypes-parser-file-list '("/usr/lib/qt/qml/QtQuick/Controls/plugins.qmltypes"
-;;      |                                   "/usr/lib/qt/qml/QtQuick/Dialogs/plugins.qmltypes"
-;;      |                                   "/usr/lib/qt/qml/QtQuick/Extras/plugins.qmltypes"
-;;      |                                   "/usr/lib/qt/qml/QtQuick/Layouts/plugins.qmltypes"
-;;      |                                   "/usr/lib/qt/qml/QtQuick/LocalStorage/plugins.qmltypes"
-;;      |                                   "/usr/lib/qt/qml/QtQuick/Particles.2/plugins.qmltypes"
-;;      |                                   "/usr/lib/qt/qml/QtQuick/PrivateWidgets/plugins.qmltypes"
-;;      |                                   "/usr/lib/qt/qml/QtQuick/Window.2/plugins.qmltypes"
-;;      |                                   "/usr/lib/qt/qml/QtQuick/XmlListModel/plugins.qmltypes"
-;;      |                                   "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
+;;      | (setq company-qml-extra-qmltypes-files '("/path/to/lib1/module1/plugins.qmltypes"
+;;      |                                          "/path/to/lib1/module2/plugins.qmltypes"
+;;      |                                          "/path/to/lib2/module1/plugins.qmltypes"
+;;      |                                          "/path/to/lib2/module2/plugins.qmltypes"))
 ;;      `----
 
-;;   3. Finally, add the backend:
-;;      ,----
-;;      | (add-to-list 'company-backends 'company-qml)
-;;      `----
-;;      Done!
+;;   You can also override the default completions provided by this
+;;   packages by setting the variable `company-qml-default-qmltypes-files'.
+;;   Find out the locations of plugins.qmltypes files for standard QML
+;;   objects and then set the variable `company-qml-default-qmltypes-files'
+;;   in the same way as `company-qml-extra-qmltypes-files'.
 
 
 ;;   [this page]
 ;;   http://doc.qt.io/qtcreator/creator-qml-modules-with-plugins.html#generating-qmltypes-files
 
 
-;; 2 *TODO*
+;; 4 *TODO*
 ;; ========
 
 ;;   - Support "as" in import statement.
@@ -109,7 +123,7 @@
 (defvar company-qml-default-qmltypes-files nil
   "The list of plugins.qmltypes files for standard QML completions.")
 (defvaralias 'qmltypes-parser-file-list 'company-qml-default-qmltypes-files)
-(make-obsolete-variable 'qmltypes-parser-file-list 'company-qml-default-qmltypes-files "0.1")
+(make-obsolete-variable 'qmltypes-parser-file-list 'company-qml-default-qmltypes-files "2016.02.12")
 
 (defvar company-qml-extra-qmltypes-files nil
   "The list of extra plugins.qmltypes files.")
@@ -216,23 +230,24 @@ Parse the `exports' field to determine user-visible paths and
 names."
   (let ((completion-table (make-hash-table :test 'equal)))
     (dolist (table type-info-tables)
-      (maphash
-       (lambda (type-name type-info)
-         (let ((exports (qmltypes-parser-type-info-exports type-info))
-               path-parts name-parts name path completions results)
-           (when exports
-             (mapc
-              (lambda (expo)
-                (setq path-parts (split-string expo " "))
-                (setq name-parts (split-string (car path-parts) "/"))
-                (setq name (cadr name-parts))
-                (setq path (concat (car name-parts) (cadr path-parts)))
-                (push (cons name (company-qml--construct-qmltypes-completions
-                                  type-name
-                                  table))
-                      (gethash path completion-table)))
-              exports))))
-       table))
+      (and table
+           (maphash
+            (lambda (type-name type-info)
+              (let ((exports (qmltypes-parser-type-info-exports type-info))
+                    path-parts name-parts name path completions results)
+                (when exports
+                  (mapc
+                   (lambda (expo)
+                     (setq path-parts (split-string expo " "))
+                     (setq name-parts (split-string (car path-parts) "/"))
+                     (setq name (cadr name-parts))
+                     (setq path (concat (car name-parts) (cadr path-parts)))
+                     (push (cons name (company-qml--construct-qmltypes-completions
+                                       type-name
+                                       table))
+                           (gethash path completion-table)))
+                   exports))))
+            table)))
     (unless (= (hash-table-count completion-table) 0)
       completion-table)))
 

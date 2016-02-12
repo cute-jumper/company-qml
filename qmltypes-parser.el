@@ -30,9 +30,6 @@
 (require 'cl-lib)
 (require 'pcase)
 
-(defvar qmltypes-parser-file-list nil
-  "A list of plugins.qmltypes files.")
-
 (cl-defstruct qmltypes-parser-type-info
   name prototype exports enums properties methods signals)
 

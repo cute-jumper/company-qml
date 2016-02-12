@@ -106,6 +106,11 @@
 (require 'qmltypes-parser)
 (require 'cl-extra)
 
+(defvar company-qml-default-qmltypes-files nil
+  "The list of plugins.qmltypes files for standard QML completions.")
+(defvaralias 'qmltypes-parser-file-list 'company-qml-default-qmltypes-files)
+(make-obsolete-variable 'qmltypes-parser-file-list 'company-qml-default-qmltypes-files "0.1")
+
 (defvar company-qml-extra-qmltypes-files nil
   "The list of extra plugins.qmltypes files.")
 
@@ -295,8 +300,8 @@ names."
   (or company-qml--completion-table
       (setq company-qml--completion-table
             (company-qml--setup-completion-table
-             (if qmltypes-parser-file-list
-                 (qmltypes-parser-init qmltypes-parser-file-list)
+             (if company-qml-default-qmltypes-files
+                 (qmltypes-parser-init company-qml-default-qmltypes-files)
                (company-qml--get-stock-completion-table))
              (and company-qml-extra-qmltypes-files
                   (qmltypes-parser-init company-qml-extra-qmltypes-files))))))

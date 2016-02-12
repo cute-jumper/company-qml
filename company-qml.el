@@ -106,6 +106,8 @@
 (require 'qmltypes-parser)
 (require 'cl-extra)
 
+(defvar company-qml-extra-qmltypes-files nil
+  "The list of extra plugins.qmltypes files.")
 
 (defvar company-qml--global-completion-table
   '(("Qt" . ("atob" "binding" "btoa" "colorEqual" "createComponent" "createQmlObject"
@@ -203,28 +205,29 @@
        type-info-table)
       completions)))
 
-(defun company-qml--setup-completion-table (type-info-table)
+(defun company-qml--setup-completion-table (&rest type-info-tables)
   "Transform TYPE-INFO-TABLE and return a table for completion.
 Parse the `exports' field to determine user-visible paths and
 names."
   (let ((completion-table (make-hash-table :test 'equal)))
-    (maphash
-     (lambda (type-name type-info)
-       (let ((exports (qmltypes-parser-type-info-exports type-info))
-             path-parts name-parts name path completions results)
-         (when exports
-           (mapc
-            (lambda (expo)
-              (setq path-parts (split-string expo " "))
-              (setq name-parts (split-string (car path-parts) "/"))
-              (setq name (cadr name-parts))
-              (setq path (concat (car name-parts) (cadr path-parts)))
-              (push (cons name (company-qml--construct-qmltypes-completions
-                                type-name
-                                type-info-table))
-                    (gethash path completion-table)))
-            exports))))
-     type-info-table)
+    (dolist (table type-info-tables)
+      (maphash
+       (lambda (type-name type-info)
+         (let ((exports (qmltypes-parser-type-info-exports type-info))
+               path-parts name-parts name path completions results)
+           (when exports
+             (mapc
+              (lambda (expo)
+                (setq path-parts (split-string expo " "))
+                (setq name-parts (split-string (car path-parts) "/"))
+                (setq name (cadr name-parts))
+                (setq path (concat (car name-parts) (cadr path-parts)))
+                (push (cons name (company-qml--construct-qmltypes-completions
+                                  type-name
+                                  table))
+                      (gethash path completion-table)))
+              exports))))
+       table))
     (unless (= (hash-table-count completion-table) 0)
       completion-table)))
 
@@ -292,8 +295,11 @@ names."
   (or company-qml--completion-table
       (setq company-qml--completion-table
             (company-qml--setup-completion-table
-             (or (company-qml--get-stock-completion-table)
-                 (qmltypes-parser-init qmltypes-parser-file-list))))))
+             (if qmltypes-parser-file-list
+                 (qmltypes-parser-init qmltypes-parser-file-list)
+               (company-qml--get-stock-completion-table))
+             (and company-qml-extra-qmltypes-files
+                  (qmltypes-parser-init company-qml-extra-qmltypes-files))))))
 
 (defun company-qml-get-completions (arg)
   (let* ((name (car company-qml--syntax-list))

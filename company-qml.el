@@ -66,7 +66,7 @@
 ;;   `company-qml-default-qmltypes-files'. What's more, if you set this
 ;;   variable, it will *override* the default completions that comes with
 ;;   this package. For most of the users, it will be sufficient to delete
-;;   the settings of =qmltypes-parser-file-list=(it's not needed any more!)
+;;   the settings of `qmltypes-parser-file-list'(it's not needed any more!)
 ;;   and use the default completions provided by this package.
 
 

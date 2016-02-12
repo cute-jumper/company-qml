@@ -106,7 +106,8 @@
 (require 'qmltypes-parser)
 (require 'cl-extra)
 
-(defvar qml-global-completion-table
+
+(defvar company-qml--global-completion-table
   '(("Qt" . ("atob" "binding" "btoa" "colorEqual" "createComponent" "createQmlObject"
              "darker" "font" "fontFamilies" "formatDate" "formatDateTime" "formatTime"
              "hsla" "hsva" "include" "isQtObject" "lighter" "locale" "md5" "matrix4x4"
@@ -188,8 +189,8 @@
 (defun company-qml--get-global-completions (name &optional field-name)
   "Get completions for global object by NAME and FIELD-NAME."
   (let ((type-info-table (if field-name
-                             (cdr (assoc name qml-global-completion-table))
-                           qml-global-completion-table))
+                             (cdr (assoc name company-qml--global-completion-table))
+                           company-qml--global-completion-table))
         (completion-name (or field-name name))
         candidate
         completions)

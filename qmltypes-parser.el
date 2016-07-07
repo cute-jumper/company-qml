@@ -94,26 +94,27 @@ The point should be placed before \"name {...}.\""
 (defun qmltypes-parser--extract-type-info (component-alist type-info-table)
   "Extract and append type info from COMPONENT-ALIST to TYPE-INFO-TABLE."
   (dolist (component (cdr component-alist))
-    (let* (name prototype exports enums properties methods signals)
-      (dolist (key-value (cdr component))
-        (pcase (car key-value)
-          ("name" (setq name (cadr key-value)))
-          ("prototype" (setq prototype (cadr key-value)))
-          ("exports" (setq exports (cadr key-value)))
-          ("Enum" (let ((values (cadr (assoc "values" (cdr key-value)))))
-                    (mapc (lambda (x) (push (car x) enums)) values)))
-          ("Property" (push (cadr (assoc "name" (cdr key-value))) properties))
-          ("Method" (push (cadr (assoc "name" (cdr key-value))) methods))
-          ("Signal" (let ((name (cadr (assoc "name" (cdr key-value)))))
-                      (push (concat "on" (upcase-initials name)) signals)))))
-      (let ((type-info (make-qmltypes-parser-type-info :name name
-                                                       :prototype prototype
-                                                       :exports exports
-                                                       :enums enums
-                                                       :properties properties
-                                                       :methods methods
-                                                       :signals signals)))
-        (puthash name type-info type-info-table)))))
+    (when (string= (car component) "Component")
+      (let* (name prototype exports enums properties methods signals)
+        (dolist (key-value (cdr component))
+          (pcase (car key-value)
+            ("name" (setq name (cadr key-value)))
+            ("prototype" (setq prototype (cadr key-value)))
+            ("exports" (setq exports (cadr key-value)))
+            ("Enum" (let ((values (cadr (assoc "values" (cdr key-value)))))
+                      (mapc (lambda (x) (push (car x) enums)) values)))
+            ("Property" (push (cadr (assoc "name" (cdr key-value))) properties))
+            ("Method" (push (cadr (assoc "name" (cdr key-value))) methods))
+            ("Signal" (let ((name (cadr (assoc "name" (cdr key-value)))))
+                        (push (concat "on" (upcase-initials name)) signals)))))
+        (let ((type-info (make-qmltypes-parser-type-info :name name
+                                                         :prototype prototype
+                                                         :exports exports
+                                                         :enums enums
+                                                         :properties properties
+                                                         :methods methods
+                                                         :signals signals)))
+          (puthash name type-info type-info-table))))))
 
 (defun qmltypes-parser-init (file-list)
   "Initialize the parser and return the table of type information."

@@ -36,5 +36,8 @@
 (defun company-qml--parse-word ()
   (company-qml--lexeme (parsec-many1-as-string (parsec-letter))))
 
+(defun company-qml--parse-symbol ()
+  (company-qml--lexeme (parsec-until-s (parsec-ch ? ))))
+
 (provide 'company-qml-parsec)
 ;;; company-qml-parsec.el ends here

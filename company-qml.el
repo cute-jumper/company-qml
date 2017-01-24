@@ -152,6 +152,8 @@
     ("DOMException"))
   "Predefined completion table for global objects available in QML.")
 
+(cl-defstruct company-qml-imports module version qualifier)
+
 (defvar company-qml--syntax-list nil
   "Store syntax information for completion.")
 
@@ -165,6 +167,32 @@
   (when (> (length s) 0)
     (let ((initial (aref s 0)))
       (and (>= initial ?A) (<= initial ?Z)))))
+
+(defun company-qml--parse-import (import-line)
+  (let (module version qualifier)
+    (parsec-with-input import-line
+      (setq module (company-qml--parse-symbol))
+      (setq version (string-to-number
+                     (company-qml--parse-symbol)))
+      (setq qualifier (parsec-optional
+                       (parsec-and
+                         (company-qml--lexeme (parsec-str "as"))
+                         (company-qml--parse-symbol)))))
+    (make-company-qml-imports :module module
+                              :version version
+                              :qualifier qualifier)))
+
+(defun company-qml--grab-imports ()
+  (save-match-data
+    (save-excursion
+      (goto-char (point-min))
+      (let (start imports)
+        (while (re-search-forward "^[ ]*import[ ]+" nil t)
+          (goto-char (match-end 0))
+          (push (company-qml--parse-import
+                 (buffer-substring-no-properties (point) (point-at-eol)))
+                imports))
+        imports))))
 
 (defun company-qml--parse-toplevel-paths ()
   (save-match-data

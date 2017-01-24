@@ -1,4 +1,4 @@
-;;; company-qml-parsec-tests.el --- Tests for company-qml-parsec.el  -*- lexical-binding: t; -*-
+;;; company-qml-parser-tests.el --- Tests for company-qml-parser.el  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2017  Junpeng Qiu
 
@@ -24,7 +24,7 @@
 
 ;;; Code:
 
-(require 'company-qml-parsec)
+(require 'company-qml-parser)
 (require 'ert)
 
 (ert-deftest test-company-qml-parse ()
@@ -39,5 +39,5 @@
                  "QtQuick.Window")))
 
 
-(provide 'company-qml-parsec-tests)
-;;; company-qml-parsec-tests.el ends here
+(provide 'company-qml-parser-tests)
+;;; company-qml-parser-tests.el ends here

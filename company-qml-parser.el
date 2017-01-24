@@ -1,4 +1,4 @@
-;;; company-qml-parsec.el --- Parsec utilities for company-qml  -*- lexical-binding: t; -*-
+;;; company-qml-parser.el --- Parser utilities for company-qml  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2017  Junpeng Qiu
 
@@ -40,5 +40,5 @@
   (company-qml--lexeme (parsec-until-s (parsec-or (parsec-ch ? )
                                                   (parsec-eol-or-eof)))))
 
-(provide 'company-qml-parsec)
-;;; company-qml-parsec.el ends here
+(provide 'company-qml-parser)
+;;; company-qml-parser.el ends here

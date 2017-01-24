@@ -34,7 +34,7 @@
   (should (equal (parsec-with-input "QtQuick 12"
                    (company-qml--parse-word))
                  "QtQuick"))
-  (should (equal (parsec-with-input "QtQuick.Window 12"
+  (should (equal (parsec-with-input "QtQuick.Window"
                    (company-qml--parse-symbol))
                  "QtQuick.Window")))
 

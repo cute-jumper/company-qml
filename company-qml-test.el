@@ -31,7 +31,6 @@
 (company-qml--get-qmltypes-completions "Win" "QtQuick.Window2.2" t)
 (company-qml--get-global-completions "Qt" "a")
 (company-qml--get-global-completions "qs")
-(company-qml--parse-import "QtQuick.Window 2.2 as Win")
 
 (provide 'company-qml-test)
 ;;; company-qml-test.el ends here

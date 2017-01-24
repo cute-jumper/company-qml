@@ -38,6 +38,7 @@
                    (company-qml--parse-symbol))
                  "QtQuick.Window")))
 
+(company-qml--parse-import "QtQuick.Window 2.2 as Win")
 
 (provide 'company-qml-parser-tests)
 ;;; company-qml-parser-tests.el ends here

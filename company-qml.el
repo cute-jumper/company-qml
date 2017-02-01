@@ -119,6 +119,7 @@
 (require 'qml-mode)
 (require 'qmltypes-parser)
 (require 'cl-extra)
+(require 'company-qml-parser)
 
 (defvar company-qml-default-qmltypes-files nil
   "The list of plugins.qmltypes files for standard QML completions.")
@@ -157,40 +158,6 @@
 
 (defvar company-qml--current-line nil
   "The current line that is being processed.")
-
-(defsubst company-qml--remove-whitespaces (s)
-  (replace-regexp-in-string "[ ]+" "" s))
-
-(defun company-qml--initial-upcase-p (s)
-  (when (> (length s) 0)
-    (let ((initial (aref s 0)))
-      (and (>= initial ?A) (<= initial ?Z)))))
-
-(defun company-qml--parse-toplevel-paths ()
-  (save-match-data
-    (save-excursion
-      (goto-char (point-min))
-      (let (start toplevel-paths)
-        (while (re-search-forward "import[ ]+" nil t)
-          (setq start (point))
-          (end-of-line)
-          (push
-           (company-qml--remove-whitespaces (buffer-substring-no-properties start (point)))
-           toplevel-paths))
-        toplevel-paths))))
-
-(defun company-qml--parse-parents ()
-  (save-excursion
-    (ignore-errors
-      (backward-up-list)
-      (let* ((end (point))
-             (name (company-qml--remove-whitespaces
-                    (buffer-substring-no-properties (line-beginning-position) end))))
-        (if (string= name "")
-            (company-qml--parse-parents)
-          (if (company-qml--initial-upcase-p name)
-              name
-            (concat (company-qml--parse-parents) "." name)))))))
 
 (defun company-qml-grab-prefix ()
   (save-excursion

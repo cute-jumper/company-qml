@@ -90,25 +90,30 @@
         (if (company-qml--initial-upcase-p name)
             name
           ;; FIXME
-          (concat (company-qml--parse-scopes) "." name))))))
+          (concat (company-qml--parse-scope) "." name))))))
 
 (defun company-qml--parse-context ()
-  (ignore-errors
-    (let ((line-text (company-qml--get-text (point-at-bol) (point)))
-          (pt (point)) start end)
-      ;; if there is `:' before the point, only need to look at current line
-      (if (setq start (string-match ":" line-text))
-          ;; if there is `.' after `:'
-          (if (setq end (string-match "\\." line-text start))
-              (make-company-qml-context
-               :scope (company-qml--remove-whitespaces
-                       (substring line-text (1+ start) end))
-               :prefix (substring line-text (1+ end)))
-            ;; FIXME: otherwise, it could be an enum, id,...
-            (make-company-qml-context :scope nil
-                                      :prefix (substring line-text (1+ start))))
-        ;; otherwise, look at the upper level to find scope
-        (make-company-qml-context :scope (company-qml--parse-scope)
+  (let ((line-text (company-qml--get-text (save-excursion
+                                            (skip-chars-backward "^;\n")
+                                            (point))
+                                          (point)))
+        (pt (point)) start end)
+    (cond
+     ;; if there is `:' before the point, only need to look at current line
+     ((or (nth 3 (syntax-ppss))       ; string
+          (nth 4 (syntax-ppss))))     ; comment
+     ((setq start (string-match ":" line-text))
+      ;; if there is `.' after `:'
+      (if (setq end (string-match "\\." line-text start))
+          (make-company-qml-context
+           :scope (company-qml--remove-whitespaces
+                   (substring line-text (1+ start) end))
+           :prefix (substring line-text (1+ end)))
+        ;; FIXME: otherwise, it could be an enum, id,...
+        (make-company-qml-context :scope nil
+                                  :prefix (substring line-text (1+ start)))))
+     ;; otherwise, look at the upper level to find scope
+     (t (make-company-qml-context :scope (company-qml--parse-scope)
                                   :prefix line-text)))))
 
 (provide 'company-qml-parser)

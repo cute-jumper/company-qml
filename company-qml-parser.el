@@ -94,27 +94,38 @@
 
 (defun company-qml--get-context ()
   (let ((line-text (company-qml--get-text (save-excursion
-                                            (skip-chars-backward "^;\n")
+                                            (skip-chars-backward "^:;\n")
                                             (point))
                                           (point)))
-        (pt (point)) start end)
+        (pt (point)) end)
     (cond
-     ;; if there is `:' before the point, only need to look at current line
      ((or (nth 3 (syntax-ppss))       ; string
           (nth 4 (syntax-ppss))))     ; comment
-     ((setq start (string-match ":" line-text))
+     ;; if there is `:' before the point, only need to look at current line
+     ((or (looking-back ":")
+          ;; or if starts with upper case letter, attached property
+          (company-qml--initial-upcase-p line-text))
       ;; if there is `.' after `:'
-      (if (setq end (string-match "\\." line-text start))
+      (if (setq end (string-match "\\." line-text))
           (make-company-qml-context
            :scope (company-qml--remove-whitespaces
-                   (substring line-text (1+ start) end))
+                   (substring line-text 0 end))
            :prefix (substring line-text (1+ end)))
         ;; FIXME: otherwise, it could be an enum, id,...
         (make-company-qml-context :scope nil
-                                  :prefix (substring line-text (1+ start)))))
+                                  :prefix line-text)))
      ;; otherwise, look at the upper level to find scope
-     (t (make-company-qml-context :scope (company-qml--parse-scope)
-                                  :prefix line-text)))))
+     (:else
+      ;; starts with lower case letter, put the part before `.' into scope
+      (if (setq end (string-match "\\." line-text))
+          (make-company-qml-context
+           :scope (format "%s.%s"
+                          (company-qml--parse-scope)
+                          (company-qml--remove-whitespaces
+                           (substring line-text 0 end)))
+           :prefix (substring line-text (1+ end)))
+        (make-company-qml-context :scope (company-qml--parse-scope)
+                                  :prefix line-text))))))
 
 (defun company-qml--get-ids ()
   (save-excursion

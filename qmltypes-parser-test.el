@@ -23,6 +23,7 @@
 ;;
 
 ;;; Code:
+(setq qmltypes-parser-file-list '("/usr/lib/qt/qml/QtQuick/Controls/plugins.qmltypes"))
 
 (setq qmltypes-parser-file-list '("/usr/lib/qt/qml/QtQuick/Controls/plugins.qmltypes"
                                   "/usr/lib/qt/qml/QtQuick/Dialogs/plugins.qmltypes"
@@ -36,7 +37,9 @@
                                   "/usr/lib/qt/qml/QtQuick.2/plugins.qmltypes"))
 (qmltypes-parser-init)
 
-(qmltypes-parser-parse-string "
+(setq component-alist (qmltypes-parser-parse-file "/usr/lib/qt/qml/QtQuick/Controls/plugins.qmltypes"))
+(setq component-alist (qmltypes-parser-parse-string "
+Module {
     Component {
         name: \"QDeclarativePropertyChanges\"
         isGood: true
@@ -46,7 +49,9 @@
         Property { name: \"restoreEntryValues\"; type: \"bool\" }
         Property { name: \"explicit\"; type: \"bool\" }
     }
-")
+}"))
+(setq type-info-table (make-hash-table :test 'equal))
+(qmltypes-parser--extract-type-info component-alist type-info-table)
 
 (provide 'qmltypes-parser-test)
 ;;; qmltypes-parser-test.el ends here

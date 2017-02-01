@@ -27,6 +27,19 @@
 (require 'parsec)
 
 (cl-defstruct company-qml-imports module version qualifier)
+(cl-defstruct company-qml-context scope prefix)
+
+(defsubst company-qml--remove-whitespaces (s)
+  (replace-regexp-in-string "[ ]+" "" s))
+
+(defsubst company-qml--get-text (beg end)
+  (company-qml--remove-whitespaces
+   (buffer-substring-no-properties beg end)))
+
+(defun company-qml--initial-upcase-p (s)
+  (when (> (length s) 0)
+    (let ((initial (aref s 0)))
+      (and (>= initial ?A) (<= initial ?Z)))))
 
 (defmacro company-qml--lexeme (p)
   `(parsec-return ,p
@@ -67,6 +80,36 @@
                  (buffer-substring-no-properties (point) (point-at-eol)))
                 imports))
         imports))))
+
+(defun company-qml--parse-scope ()
+  (save-excursion
+    (backward-up-list)
+    (let* ((name (company-qml--get-text (point-at-bol) (point))))
+      (if (string= name "")
+          (company-qml--parse-context)
+        (if (company-qml--initial-upcase-p name)
+            name
+          ;; FIXME
+          (concat (company-qml--parse-scopes) "." name))))))
+
+(defun company-qml--parse-context ()
+  (ignore-errors
+    (let ((line-text (company-qml--get-text (point-at-bol) (point)))
+          (pt (point)) start end)
+      ;; if there is `:' before the point, only need to look at current line
+      (if (setq start (string-match ":" line-text))
+          ;; if there is `.' after `:'
+          (if (setq end (string-match "\\." line-text start))
+              (make-company-qml-context
+               :scope (company-qml--remove-whitespaces
+                       (substring line-text (1+ start) end))
+               :prefix (substring line-text (1+ end)))
+            ;; FIXME: otherwise, it could be an enum, id,...
+            (make-company-qml-context :scope nil
+                                      :prefix (substring line-text (1+ start))))
+        ;; otherwise, look at the upper level to find scope
+        (make-company-qml-context :scope (company-qml--parse-scope)
+                                  :prefix line-text)))))
 
 (provide 'company-qml-parser)
 ;;; company-qml-parser.el ends here

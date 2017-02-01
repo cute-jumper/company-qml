@@ -225,7 +225,7 @@
       completions)))
 
 (defun company-qml--setup-completion-table (&rest type-info-tables)
-  "Transform TYPE-INFO-TABLE and return a table for completion.
+  "Transform TYPE-INFO-TABLES and return a table for completion.
 Parse the `exports' field to determine user-visible paths and
 names."
   (let ((completion-table (make-hash-table :test 'equal)))

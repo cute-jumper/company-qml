@@ -69,7 +69,7 @@
                               :version version
                               :qualifier qualifier)))
 
-(defun company-qml--grab-imports ()
+(defun company-qml--get-imports ()
   (save-match-data
     (save-excursion
       (goto-char (point-min))
@@ -86,13 +86,13 @@
     (backward-up-list)
     (let* ((name (company-qml--get-text (point-at-bol) (point))))
       (if (string= name "")
-          (company-qml--parse-context)
+          (company-qml--parse-scope)
         (if (company-qml--initial-upcase-p name)
             name
           ;; FIXME
           (concat (company-qml--parse-scope) "." name))))))
 
-(defun company-qml--parse-context ()
+(defun company-qml--get-context ()
   (let ((line-text (company-qml--get-text (save-excursion
                                             (skip-chars-backward "^;\n")
                                             (point))
@@ -115,6 +115,19 @@
      ;; otherwise, look at the upper level to find scope
      (t (make-company-qml-context :scope (company-qml--parse-scope)
                                   :prefix line-text)))))
+
+(defun company-qml--get-ids ()
+  (save-excursion
+    (goto-char (point-min))
+    (let (start ids)
+      (while (re-search-forward "\\<id\\>:" nil t)
+        (setq start (1+ (match-end 0)))
+        (skip-chars-forward "^;\n")
+        (unless (= (point) start)
+          (push (cons (company-qml--get-text start (point))
+                      (company-qml--parse-scope))
+                ids)))
+      ids)))
 
 (provide 'company-qml-parser)
 ;;; company-qml-parser.el ends here

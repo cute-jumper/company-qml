@@ -52,6 +52,7 @@ Module {
 }"))
 (setq type-info-table (make-hash-table :test 'equal))
 (qmltypes-parser--extract-type-info component-alist type-info-table)
+(setq type-info-table (qmltypes-parser-init qmltypes-parser-file-list))
 
 (provide 'qmltypes-parser-test)
 ;;; qmltypes-parser-test.el ends here

@@ -94,24 +94,50 @@ The point should be placed before \"name {...}.\""
     (beginning-of-line)
     (qmltypes-parser-parse-from-point)))
 
+(defun qmltypes-parser--get-enums (type alist)
+  (let (enums)
+    (dolist (p alist enums)
+      (push (cons (car p) (list :type type)) enums))))
+
+(defun qmltypes-parser--get-params (alist)
+  (let (params param-alist)
+    (dolist (p alist params)
+      (when (string= (car p) "Parameter")
+        (setq param-alist (cdr p))
+        (push (list :name (cadr (assoc "name" param-alist))
+                    :type (cadr (assoc "type" param-alist)))
+              params)))))
+
 (defun qmltypes-parser--extract-type-info (component-alist type-info-table)
   "Extract and append type info from COMPONENT-ALIST to TYPE-INFO-TABLE."
   (dolist (component (cdr component-alist))
     (when (string= (car component) "Component")
-      (let* (name prototype exports enums properties methods signals)
+      (let* (name prototype exports enums properties methods signals
+                  value)
         (dolist (key-value (cdr component))
+          (setq value (cdr key-value))
           (pcase (car key-value)
-            ("name" (setq name (cadr key-value)))
-            ("prototype" (setq prototype (cadr key-value)))
-            ("exports" (setq exports (cadr key-value)))
-            ("Enum" (let ((values (cadr (assoc "values" (cdr key-value)))))
-                      (mapc (lambda (x) (push (car x) enums)) values)))
-            ("Property" (push (cons (cadr (assoc "name" (cdr key-value)))
-                                    (cadr (assoc "type" (cdr key-value))))
+            ("name" (setq name (car value)))
+            ("prototype" (setq prototype (car value)))
+            ("exports" (setq exports (car value)))
+            ("Enum" (let ((enum-type (cadr (assoc "name" value))))
+                      (setq enums
+                            (qmltypes-parser--get-enums
+                             enum-type
+                             (cadr (assoc "values" value))))))
+            ("Property" (push (cons (cadr (assoc "name" value))
+                                    (list :type (cadr (assoc "type" value))
+                                          :group 'property))
                               properties))
-            ("Method" (push (cadr (assoc "name" (cdr key-value))) methods))
-            ("Signal" (let ((name (cadr (assoc "name" (cdr key-value)))))
-                        (push (concat "on" (upcase-initials name)) signals)))))
+            ("Method" (push (cons (cadr (assoc "name" value))
+                                  (list :params (qmltypes-parser--get-params value)
+                                        :group 'method))
+                            methods))
+            ("Signal" (let ((name (cadr (assoc "name" value))))
+                        (push (cons (concat "on" (upcase-initials name))
+                                    (list :params (qmltypes-parser--get-params value)
+                                          :method 'signal))
+                              signals)))))
         (let ((type-info (make-qmltypes-parser-type-info :name name
                                                          :prototype prototype
                                                          :exports exports

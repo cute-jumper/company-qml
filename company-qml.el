@@ -159,7 +159,7 @@
   "The current line that is being processed.")
 
 (defsubst company-qml--remove-whitespaces (s)
-  (replace-regexp-in-string "[ ]+" "" s))
+  (replace-regexp-in-string "[[:space:]]+" "" s))
 
 (defun company-qml--initial-upcase-p (s)
   (when (> (length s) 0)
@@ -171,7 +171,7 @@
     (save-excursion
       (goto-char (point-min))
       (let (start toplevel-paths)
-        (while (re-search-forward "import[ ]+" nil t)
+        (while (re-search-forward "import[[:space:]]+" nil t)
           (setq start (point))
           (end-of-line)
           (push
